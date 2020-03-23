@@ -7,6 +7,9 @@ import numpy as np
 from sklearn.utils import shuffle
 from sklearn import preprocessing
 
+random.seed(0)
+np.random.seed(0)
+
 
 def load_h5(path):
     '''

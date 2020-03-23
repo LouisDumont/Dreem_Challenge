@@ -18,6 +18,10 @@ import random
 
 random.seed(42)
 np.random.seed(seed=42)
+torch.manual_seed(42)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 
 if __name__ =="__main__":
 
@@ -30,9 +34,9 @@ if __name__ =="__main__":
     start = time.time()
 
     # Balancing the datasets
-    '''print('Balancing datset...')
+    print('Balancing datset...')
     X_train, train_labels = balance(X_train, train_labels)
-    print('Done in {}'.format(time.time()-start))'''
+    print('Done in {}'.format(time.time()-start))
     start = time.time()
 
     a,b,c,d = X_train.shape
@@ -49,5 +53,11 @@ if __name__ =="__main__":
     datasetTrain = dataset(train_feats.astype("float32"),y_train.astype("float32"), cuda=use_cuda)
     datasetVal = dataset(val_feats.astype("float32"),y_val.astype("float32"), cuda=use_cuda)
 
-    model = Egg_module(lr=0.005, cuda=use_cuda)
-    model.train(datasetTrain, batch_size=75, epochs=20, shuffle = True, test = datasetVal)
+    model = Egg_module(lr=0.001, cuda=use_cuda)
+    train_losses, eval_losses = model.train(datasetTrain, batch_size=75, epochs=100, shuffle = True, test = datasetVal)
+
+    plt.figure()
+    plt.plot(train_losses, color='b', label='train')
+    plt.plot(eval_losses, color='g', label='eval')
+    plt.legend()
+    plt.show()

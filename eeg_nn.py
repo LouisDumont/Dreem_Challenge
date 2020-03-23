@@ -4,6 +4,11 @@ import torch.nn as nn
 
 import time
 import numpy as np
+import random
+
+torch.manual_seed(0)
+np.random.seed(0)
+random.seed(0)
 
 class dataset(torch.utils.data.Dataset):
     '''
@@ -15,9 +20,6 @@ class dataset(torch.utils.data.Dataset):
         '''
         self.X_train = torch.from_numpy(X_train)
         self.Y_train = torch.from_numpy(Y_train).long()
-        '''if cuda:
-            self.X_train = self.X_train.cuda()
-            self.Y_train = self.Y_train.cuda()'''
 
     def __getitem__(self, idx):
         return self.X_train[idx], self.Y_train[idx]
@@ -86,10 +88,16 @@ class Egg_module():
 
         val_loader = torch.utils.data.DataLoader(test, batch_size = 75, num_workers =1)
 
+        train_losses = []
+        eval_losses = []
+
         for epoch in range(epochs):
             start = time.time()
             self.model.train()
-            list_loss = []
+            list_loss_train = []
+            total = 0
+            correct = 0
+            ones = 0
             for x,y in train_loader:
                 if self.cuda: x,y = x.cuda(), y.cuda()
                 output = self.model(x)
@@ -99,13 +107,24 @@ class Egg_module():
                 loss.backward()
                 self.optimizer.step()
 
-                list_loss.append(loss.detach().cpu().numpy())
+                list_loss_train.append(loss.detach().cpu().numpy())
 
-            print(f"Epoch {epoch} : Loss Total {np.stack(list_loss).mean()}, time {time.time()-start}")
+                _, predicted = torch.max(output.data, 1)
+                total += y.size(0)
+                correct += (predicted == y).cpu().sum().item()
+                ones += (predicted == 1).cpu().sum().item()
+
+            train_loss = np.stack(list_loss_train).mean()
+            train_losses.append(train_loss)
+            acc = 100 * correct / total
+            balance = 100 * ones / total
+
+            print(f"Epoch {epoch} : Loss Total {train_loss}, Train accuracy {acc}, Balance {balance}, time {time.time()-start}")
             mid = time.time()
 
             self.model.eval()
-            list_loss = []
+            list_loss_eval = []
+            ones = 0
             total = 0
             correct = 0
             for x,y in val_loader:
@@ -114,22 +133,27 @@ class Egg_module():
                 output = self.model(x)
                 #print(output.shape)
                 loss = self.criterion(output,y)
-                list_loss.append(loss.detach().cpu().numpy())
+                list_loss_eval.append(loss.detach().cpu().numpy())
                 _, predicted = torch.max(output.data, 1)
                 total += y.size(0)
                 correct += (predicted == y).cpu().sum().item()
+                ones += (predicted == 1).cpu().sum().item()
 
-            print('Validation accuracy: %d %%, time %f' % (100 * correct / total, time.time()-mid))
+            eval_loss = np.stack(list_loss_eval).mean()
+            eval_losses.append(eval_loss)
+            print('Validation accuracy: %d %%, balance %d %%, time %f' % (100 * correct / total, 100 * ones / total, time.time()-mid))
+        
+        return (train_losses, eval_losses)
 
-        def predict(self, x_eval):
-            y_eval = self.model(x_eval)
-            return y_eval
-    
-        def save_weight(self,name_input = "model_weights.pth"):
-            state_dict = self.model.state_dict()
-            torch.save(state_dict, name_input)
+    def predict(self, x_eval):
+        y_eval = self.model(x_eval)
+        return y_eval.cpu().numpy()
 
-        def load(self,name_weights='model_weights.pth'):
-            state_dict = torch.load(name_weights)
-            self.model.load_state_dict(state_dict)
+    def save_weight(self,name_input = "model_weights.pth"):
+        state_dict = self.model.state_dict()
+        torch.save(state_dict, name_input)
+
+    def load(self,name_weights='model_weights.pth'):
+        state_dict = torch.load(name_weights)
+        self.model.load_state_dict(state_dict)
 

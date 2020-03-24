@@ -27,7 +27,7 @@ if __name__ =="__main__":
     print('Done in {}'.format(time.time()-start))
     start = time.time()
 
-    #show_ts(X_train)
+    #show_ts(X_train, idx=(0,1))
 
     #show_ts(ts_train) # That function is not adapted
 
@@ -49,8 +49,8 @@ if __name__ =="__main__":
     '''print('Scaling all channels')
     X_train = scale_channels(X_train)
     print('Done in {}'.format(time.time()-start))
-    start = time.time()'''
-
+    start = time.time()
+'''
     print('Computing Welch transforms of the inputs...')
     X_train = map_channels(X_train, lambda x: own_welch(x, 50)) # Attention! the Welch dim do not correspond to frequency!!
     # !! Frequencies change is nperseg changes (unclear doc)
@@ -68,9 +68,9 @@ if __name__ =="__main__":
     # [np.amax, np.mean, np.min, np.std]
     X_train = create_features_list(X_train, features_list)
 
-    print('Scaling all features')
+    '''print('Scaling all features')
     X_train = scale_features(X_train)
-    print('Done in {}'.format(time.time()-start))
+    print('Done in {}'.format(time.time()-start))'''
 
     start = time.time()
     val_feats, y_val = X_train[-100:], train_labels[-100:]
@@ -84,36 +84,38 @@ if __name__ =="__main__":
         print(np.mean(train_feats[:,:,i]), np.std(train_feats[:,:,i]))'''
 
     # Formalize the dataset (n_samples*n_features)
-    in_train, in_val = make_inputs(train_feats), make_inputs(val_feats)
+    # Make one prediction per segment
+    '''in_train, in_val = make_inputs(train_feats), make_inputs(val_feats)
     n_samples = X_train.shape[1]
-
     out_train, out_val = make_outputs(y_train, n_tests=n_samples), make_outputs(y_val, n_tests=n_samples)
+    '''
+    # Make a single prediction per patient
+    print(train_feats.shape)
+    nx, ny, nz = train_feats.shape
+    in_train, in_val = np.reshape(train_feats, (nx, ny*nz)), np.reshape(val_feats, (-1, ny*nz))
+    out_train, out_val = y_train, y_val
+    print('Done in {}'.format(time.time()-start))
+    start = time.time()
+
     print('in_train shape:', in_train.shape)
     print('in_val shape:', in_val.shape)
     print('Balance in train:', sum(y_train)/len(y_train))
     print('Balance in val:', sum(y_val)/len(y_val))
-    # Make a single prediction per patient
-    '''print(train_feats.shape)
-    nx, ny, nz = train_feats.shape
-    in_train, in_val = np.reshape(train_feats, (nx, ny*nz)), np.reshape(val_feats, (-1, ny*nz))
-    out_train, out_val = y_train, y_val'''
-    print('Done in {}'.format(time.time()-start))
-    start = time.time()
 
     # Do and print PCA to debug
     '''print(in_train.shape)
     for i in range(in_train.shape[1]):
         print(np.mean(in_train[:,i]), np.std(in_train[:,i]))'''
-    show_PCA(in_train, out_train)
+    # show_PCA(in_train, out_train)
 
-    pca_model = PCA(n_components=2)
+    '''pca_model = PCA(n_components=5)
     in_train = pca_model.fit_transform(in_train)
-    in_val = pca_model.transform(in_val)
+    in_val = pca_model.transform(in_val)'''
 
     print('Training and testing model...')
     print('Final shape of the training set:', in_train.shape)
-    #model = LogisticRegression() # class_weight='balanced'
-    model = SVC()
+    model = LogisticRegression(C=1e-3) # class_weight='balanced'
+    #model = SVC()
     model.fit(in_train, out_train)
     print('Accuracy on train:', model.score(in_train, out_train))
     print('Accuracy on val:', model.score(in_val, out_val))
@@ -122,8 +124,10 @@ if __name__ =="__main__":
     start = time.time()
 
     # Print final accuracy:
-    finpred_train = make_indiv_pred(model.predict(in_train), n_tests=n_samples)
+    '''finpred_train = make_indiv_pred(model.predict(in_train), n_tests=n_samples)
     finpred_val = make_indiv_pred(model.predict(in_val), n_tests=n_samples)
     print('Accuracy on final prediction (train):', accuracy_score(y_train, finpred_train))
     print('Accuracy on final prediction (val):', accuracy_score(y_val, finpred_val))
     print('Proportion of 1 predicted(val):', sum(finpred_val)/len(finpred_val))
+    print('Proportion of 1 predicted(pred):', sum(finpred_train)/len(finpred_train))'''
+

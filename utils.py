@@ -159,6 +159,22 @@ def scale_channels(tab, custom=True):
             res[:,:,i,:] = preprocessing.scale(tab[:,:,i,:])
     return res
 
+def scale_indiv_channels(tab, custom=True):
+    '''
+    Each channel with be standardized (individually) to have mean=0 and std=1
+    '''
+    n_patients, n_segments, n_channels, n_feat = tab.shape
+    res = np.zeros(tab.shape)
+    for patient in range(n_patients):
+        for segment in range(n_segments):
+            for i in range(n_channels):
+                if custom:
+                    x = tab[patient,segment,i,:]
+                    res[patient,segment,i] = (x-np.mean(x))/np.std(x)
+                else:
+                    res[patient,segment,i] = preprocessing.scale(tab[:,:,i,:])
+    return res
+
 def scale_features(tab, custom=True):
     '''
     Each channel with be standardized (accross all samples) to have mean=0 and std=1

@@ -33,11 +33,25 @@ if __name__ =="__main__":
     print('Done in {}'.format(time.time()-start))
     start = time.time()
 
+    
+
     # Balancing the datasets
     print('Balancing datset...')
     X_train, train_labels = balance(X_train, train_labels)
     print('Done in {}'.format(time.time()-start))
     start = time.time()
+
+    print('Re-sampling for data augmentation...')
+    re_sample_rate = 2
+    X_train = re_sample(X_train, re_sample_rate)
+    #train_labels = make_outputs(train_labels, n_tests=re_sample_rate)
+    print('Done in {}'.format(time.time()-start))
+    start = time.time()
+
+    '''print('Scaling dataset...')
+    X_train = scale_channels(X_train, custom=True)
+    print('Done in {}'.format(time.time()-start))
+    start = time.time()'''
 
     a,b,c,d = X_train.shape
     X_train = np.reshape(X_train, (a*b,c,d))
@@ -53,8 +67,8 @@ if __name__ =="__main__":
     datasetTrain = dataset(train_feats.astype("float32"),y_train.astype("float32"), cuda=use_cuda)
     datasetVal = dataset(val_feats.astype("float32"),y_val.astype("float32"), cuda=use_cuda)
 
-    model = Egg_module(lr=0.001, cuda=use_cuda)
-    train_losses, eval_losses = model.train(datasetTrain, batch_size=75, epochs=100, shuffle = True, test = datasetVal)
+    model = Egg_module(lr=0.0001, cuda=use_cuda, n_samples=val_feats.shape[2])
+    train_losses, eval_losses = model.train(datasetTrain, batch_size=64, epochs=200, shuffle = True, test = datasetVal)
 
     plt.figure()
     plt.plot(train_losses, color='b', label='train')

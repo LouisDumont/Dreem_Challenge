@@ -28,45 +28,103 @@ class dataset(torch.utils.data.Dataset):
         return len(self.X_train)
 
 
+class Egg_1d(nn.Module):
+    def __init__(self, n_channels=7, n_samples=500):
+        super().__init__()
+        self.n_channels, self.n_samples = n_channels, n_samples
+        self.p = 0.3
+        # Compute the size of the last fully connected layer
+        w_init = n_samples
+        w = w_init
+        for i in range(4):
+            w = w-2 # Conv
+            w = w // 2 # Pooling
+        for i in range(2):
+            w = w-2
+        #self.n_hid = w
+        # TODO: add delated conv 
+        self.convolutions = nn.Sequential(
+            nn.Conv1d(7, 30, 3),
+            nn.ReLU(),
+            nn.MaxPool1d(3),
+            nn.Dropout(p=self.p),
+            nn.Conv1d(30, 30, 3),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            nn.Dropout(p=self.p),
+            nn.Conv1d(30, 20, 3),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            nn.Dropout(p=self.p),
+            nn.Conv1d(20, 20, 3),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            nn.Dropout(p=self.p),
+            nn.Conv1d(20, 20, 3),
+            nn.ReLU(),
+            nn.Conv1d(20, 20, 3),
+            nn.Dropout(p=self.p),
+            nn.ReLU(),
+            )
+        self.fc = nn.Linear(w*20,2)
+
+    def forward(self, input):
+        a,b,c = input.shape
+        #input = input.view(a, 1, b, c)
+        x = self.convolutions(input)
+        x = x.view(-1, self.n_hid*20)
+        scores = self.fc(x)
+        return scores
+
 
 class Egg_nn(nn.Module):
     def __init__(self, n_channels=7, n_samples=500):
         super().__init__()
         self.n_channels, self.n_samples = n_channels, n_samples
+        self.p = 0.2
         # Compute the size of the last fully connected layer
         w_init = n_samples
         w = w_init
         for i in range(4):
-            w = w-1 # Conv
+            w = w-2 # Conv
             w = w // 2 # Pooling
         for i in range(2):
-            w = w-1
-        self.n_hid = n_channels * w
+            w = w-2
+        self.n_hid = (n_channels-6) * w
         # TODO: add delated conv 
         self.convolutions = nn.Sequential(
-            nn.Conv2d(1, 50, (1,2)),
+            nn.Conv2d(1, 50, (2,3)),
             nn.ReLU(),
             nn.MaxPool2d((1,2)),
-            nn.Conv2d(50, 50, (1,2)),
+            nn.Dropout(p=self.p),
+            nn.Conv2d(50, 50, (2,3)),
             nn.ReLU(),
             nn.MaxPool2d((1,2)),
-            nn.Conv2d(50, 20, (1,2)),
+            nn.Dropout(p=self.p),
+            nn.Conv2d(50, 20, (2,3)),
             nn.ReLU(),
             nn.MaxPool2d((1,2)),
-            nn.Conv2d(20, 20, (1,2)),
+            nn.Dropout(p=self.p),
+            nn.Conv2d(20, 20, (2,3)),
             nn.ReLU(),
             nn.MaxPool2d((1,2)),
-            nn.Conv2d(20, 20, (1,2)),
+            nn.Dropout(p=self.p),
+            nn.Conv2d(20, 20, (2,3)),
             nn.ReLU(),
-            nn.Conv2d(20, 20, (1,2)),
+            nn.Conv2d(20, 20, (2,3)),
+            nn.Dropout(p=self.p),
             nn.ReLU(),
             )
+        #print('n_samples:', self.n_samples)
+        #print('n_hid:', self.n_hid)
         self.fc = nn.Linear(self.n_hid*20,2)
 
     def forward(self, input):
         a,b,c = input.shape
         input = input.view(a, 1, b, c)
+        #print(input.shape)
         x = self.convolutions(input)
+        #print(x.shape)
         x = x.view(-1, self.n_hid*20)
         scores = self.fc(x)
         return scores
@@ -74,8 +132,8 @@ class Egg_nn(nn.Module):
 
 
 class Egg_module():
-    def __init__(self, lr=0.002, criterion=nn.CrossEntropyLoss(), cuda=False):
-        self.model = Egg_nn()
+    def __init__(self, lr=0.002, criterion=nn.CrossEntropyLoss(), cuda=False, n_samples=500):
+        self.model = Egg_nn(n_samples=n_samples)
         if cuda: self.model = self.model.cuda()
         self.cuda = cuda
         self.lr = lr
@@ -141,7 +199,7 @@ class Egg_module():
 
             eval_loss = np.stack(list_loss_eval).mean()
             eval_losses.append(eval_loss)
-            print('Validation accuracy: %d %%, balance %d %%, time %f' % (100 * correct / total, 100 * ones / total, time.time()-mid))
+            print('Validation accuracy: %d, balance %d, time %f' % (100 * correct / total, 100 * ones / total, time.time()-mid))
         
         return (train_losses, eval_losses)
 

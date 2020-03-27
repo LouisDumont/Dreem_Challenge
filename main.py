@@ -114,8 +114,8 @@ if __name__ =="__main__":
 
     print('Training and testing model...')
     print('Final shape of the training set:', in_train.shape)
-    model = LogisticRegression(C=1e-3) # class_weight='balanced'
-    #model = SVC()
+    #model = LogisticRegression(C=1e-6) # class_weight='balanced'
+    model = SVC(kernel='rbf', C=1e-2)
     model.fit(in_train, out_train)
     print('Accuracy on train:', model.score(in_train, out_train))
     print('Accuracy on val:', model.score(in_val, out_val))

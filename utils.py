@@ -188,3 +188,12 @@ def scale_features(tab, custom=True):
         else:
             res[:,:,i] = preprocessing.scale(tab[:,:,i])
     return res
+
+def write_preds(preds_list, filename='tem_predictions.csv'):
+    with open(filename, mode='w+') as pred_file:
+        pred_writer = csv.writer(pred_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+        pred_writer.writerow(['id', 'lable'])
+
+        for i, pred in enumerate(preds_list):
+            pred_writer.writerow([str(i), str(pred)])

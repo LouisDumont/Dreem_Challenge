@@ -32,7 +32,7 @@ class Egg_1d(nn.Module):
     def __init__(self, n_channels=7, n_samples=500):
         super().__init__()
         self.n_channels, self.n_samples = n_channels, n_samples
-        self.p = 0.3
+        self.p = 0.1
         # Compute the size of the last fully connected layer
         w_init = n_samples
         w = w_init
@@ -41,38 +41,38 @@ class Egg_1d(nn.Module):
             w = w // 2 # Pooling
         for i in range(2):
             w = w-2
-        #self.n_hid = w
+        self.n_hid = w
         # TODO: add delated conv 
         self.convolutions = nn.Sequential(
-            nn.Conv1d(7, 30, 3),
+            nn.Conv1d(7, 10, 3),
             nn.ReLU(),
-            nn.MaxPool1d(3),
             nn.Dropout(p=self.p),
-            nn.Conv1d(30, 30, 3),
-            nn.ReLU(),
             nn.MaxPool1d(2),
-            nn.Dropout(p=self.p),
-            nn.Conv1d(30, 20, 3),
+            nn.Conv1d(10, 10, 3),
             nn.ReLU(),
+            nn.Dropout(p=self.p),
             nn.MaxPool1d(2),
-            nn.Dropout(p=self.p),
-            nn.Conv1d(20, 20, 3),
+            nn.Conv1d(10, 10, 3),
             nn.ReLU(),
+            nn.Dropout(p=self.p),
             nn.MaxPool1d(2),
-            nn.Dropout(p=self.p),
-            nn.Conv1d(20, 20, 3),
+            nn.Conv1d(10, 6, 3),
             nn.ReLU(),
-            nn.Conv1d(20, 20, 3),
             nn.Dropout(p=self.p),
+            nn.MaxPool1d(2),
+            nn.Conv1d(6, 6, 3),
+            nn.ReLU(),
+            nn.Dropout(p=self.p),
+            nn.Conv1d(6, 6, 3),
             nn.ReLU(),
             )
-        self.fc = nn.Linear(w*20,2)
+        self.fc = nn.Linear(self.n_hid*6,2)
 
     def forward(self, input):
         a,b,c = input.shape
         #input = input.view(a, 1, b, c)
         x = self.convolutions(input)
-        x = x.view(-1, self.n_hid*20)
+        x = x.view(-1, self.n_hid*6)
         scores = self.fc(x)
         return scores
 
@@ -81,7 +81,7 @@ class Egg_nn(nn.Module):
     def __init__(self, n_channels=7, n_samples=500):
         super().__init__()
         self.n_channels, self.n_samples = n_channels, n_samples
-        self.p = 0.2
+        self.p = 0.1
         # Compute the size of the last fully connected layer
         w_init = n_samples
         w = w_init
@@ -133,12 +133,12 @@ class Egg_nn(nn.Module):
 
 class Egg_module():
     def __init__(self, lr=0.002, criterion=nn.CrossEntropyLoss(), cuda=False, n_samples=500):
-        self.model = Egg_nn(n_samples=n_samples)
+        self.model = Egg_1d(n_samples=n_samples)
         if cuda: self.model = self.model.cuda()
         self.cuda = cuda
         self.lr = lr
         self.criterion = criterion
-        self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr, weight_decay=1e-3)
 
     def train(self, datasetTrain, batch_size, epochs, shuffle = True, test = None):
         train_loader = torch.utils.data.DataLoader(datasetTrain,
@@ -205,7 +205,7 @@ class Egg_module():
 
     def predict(self, x_eval):
         y_eval = self.model(x_eval)
-        return y_eval.cpu().numpy()
+        return y_eval.detach().cpu().numpy()
 
     def save_weight(self,name_input = "model_weights.pth"):
         state_dict = self.model.state_dict()

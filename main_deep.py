@@ -1,26 +1,25 @@
 import os
+import random
 import time
+
 import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+from sklearn.decomposition import PCA
 import torch
 
 from utils import *
 from visualisation import *
 from time_frequence import *
-from feature_extraction import *
 from eeg_nn import *
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
-from sklearn.decomposition import PCA
-
-import random
 
 random.seed(42)
 np.random.seed(seed=42)
 torch.manual_seed(42)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
+
 
 def train():
     start = time.time()
@@ -49,7 +48,7 @@ def train():
     re_sample_rate = 2
     val_feats = re_sample(val_feats, re_sample_rate)
     train_feats = re_sample(train_feats, re_sample_rate)
-    #train_labels = make_outputs(train_labels, n_tests=re_sample_rate)
+    # train_labels = make_outputs(train_labels, n_tests=re_sample_rate)
     print('Done in {}'.format(time.time()-start))
     start = time.time()
 
@@ -58,16 +57,17 @@ def train():
     print('Done in {}'.format(time.time()-start))
     start = time.time()'''
 
-    a,b,c,d = val_feats.shape
-    val_feats = np.reshape(val_feats, (a*b,c,d))
+    a, b, c, d = val_feats.shape
+    val_feats = np.reshape(val_feats, (a*b, c, d))
     y_val = np.array(make_outputs(y_val, b))
-    a,b,c,d = train_feats.shape
+    a, b, c, d = train_feats.shape
     print("training set shape:", train_feats.shape)
-    train_feats = np.reshape(train_feats, (a*b,c,d))
+    train_feats = np.reshape(train_feats, (a*b, c, d))
     y_train = np.array(make_outputs(y_train, b))
 
     use_cuda = torch.cuda.is_available()
-    if use_cuda: print('Using CUDA!')
+    if use_cuda:
+        print('Using CUDA!')
 
     weights = None
     if not balance_set:
@@ -78,19 +78,22 @@ def train():
         x0 = s0/(s0+s1)
         x1 = s1/(s0+s1)
         reg = 1/(2*x0*x1)
-        weights = torch.from_numpy(np.array([reg*x1,reg*x0])).float()
-        if use_cuda: weights = weights.cuda()
+        weights = torch.from_numpy(np.array([reg*x1, reg*x0])).float()
+        if use_cuda:
+            weights = weights.cuda()
     print('weights:', weights)
 
-    datasetTrain = dataset(train_feats.astype("float32"),y_train.astype("float32"), cuda=use_cuda)
-    datasetVal = dataset(val_feats.astype("float32"),y_val.astype("float32"), cuda=use_cuda)
+    datasetTrain = dataset(train_feats.astype("float32"), y_train.astype("float32"), cuda=use_cuda)
+    datasetVal = dataset(val_feats.astype("float32"), y_val.astype("float32"), cuda=use_cuda)
 
-    model = Egg_module(lr=0.0002, cuda=use_cuda, n_samples=val_feats.shape[2], criterion=torch.nn.CrossEntropyLoss(weight=weights))
+    model = Egg_module(lr=0.0002, cuda=use_cuda, n_samples=val_feats.shape[2],
+                       criterion=torch.nn.CrossEntropyLoss(weight=weights))
 
     pytorch_total_params = sum(p.numel() for p in model.model.parameters() if p.requires_grad)
     print('Number of trainable parameters:', pytorch_total_params)
 
-    train_losses, eval_losses = model.train(datasetTrain, batch_size=64, epochs=400, shuffle = True, test = datasetVal)
+    train_losses, eval_losses = model.train(datasetTrain, batch_size=64, epochs=400,
+                                            shuffle=True, test=datasetVal)
 
     model.save_weight()
 
@@ -99,6 +102,7 @@ def train():
     plt.plot(eval_losses, color='g', label='eval')
     plt.legend()
     plt.show()
+
 
 def predict():
     start = time.time()
@@ -113,20 +117,23 @@ def predict():
     print('Done in {}'.format(time.time()-start))
     start = time.time()
 
-    a,b,c,d = test_feats.shape
+    a, b, c, d = test_feats.shape
     test_feats = np.reshape(test_feats, (a*b,c,d))
 
     use_cuda = torch.cuda.is_available()
-    if use_cuda: print('Using CUDA!')
+    if use_cuda:
+        print('Using CUDA!')
 
-    model = Egg_module(lr=0.0002, cuda=use_cuda, n_samples=test_feats.shape[2], criterion=torch.nn.CrossEntropyLoss())
+    model = Egg_module(lr=0.0002, cuda=use_cuda, n_samples=test_feats.shape[2],
+                       criterion=torch.nn.CrossEntropyLoss())
     model.load()
 
     raw_res = []
     for i in range(a*b):
-        in_feat = torch.from_numpy(test_feats[i]).view(1,c,d).float()
-        if use_cuda: in_feat = in_feat.cuda()
-        #print(in_feat.shape)
+        in_feat = torch.from_numpy(test_feats[i]).view(1, c, d).float()
+        if use_cuda:
+            in_feat = in_feat.cuda()
+        # print(in_feat.shape)
         out = model.predict(in_feat)
         raw_res.append(np.argmax(out))
     indiv_preds = make_indiv_pred(raw_res, b)
@@ -134,8 +141,7 @@ def predict():
     write_preds(indiv_preds)
 
 
-
 if __name__ =="__main__":
 
     train()
-    #predict()
+    # predict()

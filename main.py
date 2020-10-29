@@ -1,23 +1,21 @@
 import os
+import random
 import time
+
 import numpy as np
-
-from utils import *
-from visualisation import *
-from time_frequence import *
-from feature_extraction import *
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 
-import random
+from utils import *
+from visualisation import *
+from time_frequence import *
 
 random.seed(42)
 np.random.seed(seed=42)
 
-if __name__ =="__main__":
+if __name__ == "__main__":
 
     start = time.time()
     print('Loading dataset...')
@@ -27,9 +25,7 @@ if __name__ =="__main__":
     print('Done in {}'.format(time.time()-start))
     start = time.time()
 
-    #show_ts(X_train, idx=(0,1))
-
-    #show_ts(ts_train) # That function is not adapted
+    # show_ts(X_train, idx=(0,1))
 
     # Balancing the datasets
     print('Balancing datset...')
@@ -50,9 +46,11 @@ if __name__ =="__main__":
     X_train = scale_channels(X_train)
     print('Done in {}'.format(time.time()-start))
     start = time.time()
-'''
+    '''
+
     print('Computing Welch transforms of the inputs...')
-    X_train = map_channels(X_train, lambda x: own_welch(x, 50)) # Attention! the Welch dim do not correspond to frequency!!
+    X_train = map_channels(X_train, lambda x: own_welch(x, 50))
+    # Attention! the Welch dim do not correspond to frequency!!
     # !! Frequencies change is nperseg changes (unclear doc)
     print('Done in {}'.format(time.time()-start))
     start = time.time()
@@ -63,7 +61,8 @@ if __name__ =="__main__":
     # Create the formated inputs
     # Split
     print('Spliting and formating sets...')
-    features_list = [lambda x: x[0], lambda x: x[1], lambda x: x[2], lambda x: x[3], lambda x: x[4], lambda x: x[5], lambda x: x[6]]
+    features_list = [lambda x: x[0], lambda x: x[1], lambda x: x[2], lambda x: x[3],
+                     lambda x: x[4], lambda x: x[5], lambda x: x[6]]
     # [(lambda x: extract_index(x, i)) for i in range(7)]
     # [np.amax, np.mean, np.min, np.std]
     X_train = create_features_list(X_train, features_list)
@@ -76,7 +75,8 @@ if __name__ =="__main__":
     val_feats, y_val = X_train[-100:], train_labels[-100:]
     train_feats, y_train = X_train[:-100], train_labels[:-100]
     # Extract formal features
-    '''train_feats = create_features_list(x_train, features_list) # [(lambda x: extract_index(x, i)) for i in range(7)]
+    '''train_feats = create_features_list(x_train, features_list)
+    # [(lambda x: extract_index(x, i)) for i in range(7)]
     val_feats = create_features_list(x_val, features_list) # [np.amax, np.mean, np.min, np.std]'''
 
     print('train_feats shape:', train_feats.shape)
@@ -87,7 +87,8 @@ if __name__ =="__main__":
     # Make one prediction per segment
     '''in_train, in_val = make_inputs(train_feats), make_inputs(val_feats)
     n_samples = X_train.shape[1]
-    out_train, out_val = make_outputs(y_train, n_tests=n_samples), make_outputs(y_val, n_tests=n_samples)
+    out_train, out_val = (make_outputs(y_train, n_tests=n_samples),
+                          make_outputs(y_val, n_tests=n_samples))
     '''
     # Make a single prediction per patient
     print(train_feats.shape)
@@ -114,7 +115,7 @@ if __name__ =="__main__":
 
     print('Training and testing model...')
     print('Final shape of the training set:', in_train.shape)
-    #model = LogisticRegression(C=1e-6) # class_weight='balanced'
+    # model = LogisticRegression(C=1e-6) # class_weight='balanced'
     model = SVC(kernel='rbf', C=1e-2)
     model.fit(in_train, out_train)
     print('Accuracy on train:', model.score(in_train, out_train))
@@ -130,4 +131,3 @@ if __name__ =="__main__":
     print('Accuracy on final prediction (val):', accuracy_score(y_val, finpred_val))
     print('Proportion of 1 predicted(val):', sum(finpred_val)/len(finpred_val))
     print('Proportion of 1 predicted(pred):', sum(finpred_train)/len(finpred_train))'''
-

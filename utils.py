@@ -1,8 +1,9 @@
 import os
+import random
 import time
+
 import csv
 import h5py
-import random
 import numpy as np
 from sklearn.utils import shuffle
 from sklearn import preprocessing
@@ -22,11 +23,12 @@ def load_h5(path):
         # Get the data
         data = (file[a_group_key]).value
         n_tests, n_channels, n_samples = data[0].shape
-        
+
         res = np.zeros((len(data), n_tests, n_channels, n_samples))
         for i, item in enumerate(data):
             res[i] = item
     return res
+
 
 def load_csv(path):
     '''
@@ -36,10 +38,11 @@ def load_csv(path):
     with open(path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
-            if row[0]!='id':
+            if row[0] != 'id':
                 idx.append(int(row[0]))
                 classes.append(int(row[1]))
     return idx, classes
+
 
 def make_inputs(tab):
     '''
@@ -47,6 +50,7 @@ def make_inputs(tab):
     '''
     n_patients, n_tests, n_features = tab.shape
     return np.resize(tab, (n_patients*n_tests, n_features))
+
 
 def make_outputs(out, n_tests=40):
     '''
@@ -58,12 +62,13 @@ def make_outputs(out, n_tests=40):
             res.append(val)
     return(res)
 
+
 def make_indiv_pred(preds, n_tests=40):
     '''
     Makes a single prediction per patient out of test-wise predictions
     '''
     n_preds = len(preds)
-    assert n_preds%n_tests==0
+    assert n_preds % n_tests == 0
     n_patients = n_preds//n_tests
     final_preds = []
     for patient in range(n_patients):
@@ -73,18 +78,20 @@ def make_indiv_pred(preds, n_tests=40):
         final_preds.append(sum_preds/n_tests >= 0.5)
     return final_preds
 
+
 def balance(X_train, train_labels):
     '''
     Selects samples from the dataset to balance it (attention: may throw away most of the dataset)
     '''
     train_labels = np.array(train_labels)
-    Xtrain_pos = X_train[train_labels==1]
+    Xtrain_pos = X_train[train_labels == 1]
     # Select as many zero samples as there are positive samples
-    Xtrain_zero = X_train[train_labels==0][:Xtrain_pos.shape[0]]
+    Xtrain_zero = X_train[train_labels == 0][:Xtrain_pos.shape[0]]
     nXtrain = np.concatenate([Xtrain_pos, Xtrain_zero], axis=0)
     nYtrain = [1 for i in range(Xtrain_pos.shape[0])] + [0 for i in range(Xtrain_zero.shape[0])]
     nXtrain, nYtrain = shuffle(nXtrain, nYtrain)
     return (nXtrain, nYtrain)
+
 
 def create_features_list(tab, features):
     '''
@@ -97,16 +104,18 @@ def create_features_list(tab, features):
         for test in range(n_tests):
             for channel in range(n_channels):
                 for idx, feature in enumerate(features):
-                    #print(feature(tab[patient, test, channel]))
+                    # print(feature(tab[patient, test, channel]))
                     res[patient, test, channel*n_feats + idx] = feature(tab[patient, test, channel])
     return res
 
+
 def create_features_func(tab, function):
     '''
-    From the original samples and a function to apply to each channel, returns the array of features.
+    From the original samples and a function to apply to each channel,
+    returns the array of features.
     '''
     n_patients, n_tests, n_channels, n_samples = tab.shape
-    res_len = function(tab[0,0,0]).shape[0]
+    res_len = function(tab[0, 0, 0]).shape[0]
     res = np.zeros((n_patients, n_tests, res_len*n_channels))
     for patient in range(n_patients):
         for test in range(n_tests):
@@ -116,12 +125,13 @@ def create_features_func(tab, function):
             res[patient, test] = np.concatenate(res_list, axis=0)
     return res
 
+
 def map_channels(tab, transform):
     '''
     Applies transform to each channel of the tab
     '''
     n_patients, n_tests, n_channels, n_samples = tab.shape
-    res_len = transform(tab[0,0,0]).shape[0]
+    res_len = transform(tab[0, 0, 0]).shape[0]
     res = np.zeros((n_patients, n_tests, n_channels, res_len))
     for patient in range(n_patients):
         for test in range(n_tests):
@@ -129,9 +139,11 @@ def map_channels(tab, transform):
                 res[patient, test, channel] = transform(tab[patient, test, channel])
     return res
 
+
 def re_sample(tab, n_mult):
     '''
-    Multiply the number of samples in one dataset by dividing the time series in n_mult sub-time series
+    Multiply the number of samples in one dataset by dividing the time series
+    in n_mult sub-time series
     '''
     n_patients, n_samples, n_channels, n_feat = tab.shape
     print(n_feat, n_mult)
@@ -145,6 +157,7 @@ def re_sample(tab, n_mult):
                     res[patient, sample*n_mult+i, channel] = tab[patient, sample, channel, i*new_l:(i+1)*new_l]
     return res
 
+
 def scale_channels(tab, custom=True):
     '''
     Each channel with be standardized (accross all samples) to have mean=0 and std=1
@@ -153,11 +166,12 @@ def scale_channels(tab, custom=True):
     res = np.zeros(tab.shape)
     for i in range(n_channels):
         if custom:
-            x = tab[:,:,i,:]
-            res[:,:,i,:] = (x-np.mean(x))/np.std(x)
+            x = tab[:, :, i, :]
+            res[:, :, i, :] = (x-np.mean(x))/np.std(x)
         else:
-            res[:,:,i,:] = preprocessing.scale(tab[:,:,i,:])
+            res[:, :, i, :] = preprocessing.scale(tab[:, :, i, :])
     return res
+
 
 def scale_indiv_channels(tab, custom=True):
     '''
@@ -169,11 +183,12 @@ def scale_indiv_channels(tab, custom=True):
         for segment in range(n_segments):
             for i in range(n_channels):
                 if custom:
-                    x = tab[patient,segment,i,:]
-                    res[patient,segment,i] = (x-np.mean(x))/np.std(x)
+                    x = tab[patient, segment, i, :]
+                    res[patient, segment, i] = (x-np.mean(x))/np.std(x)
                 else:
-                    res[patient,segment,i] = preprocessing.scale(tab[:,:,i,:])
+                    res[patient, segment, i] = preprocessing.scale(tab[:, :, i, :])
     return res
+
 
 def scale_features(tab, custom=True):
     '''
@@ -183,15 +198,17 @@ def scale_features(tab, custom=True):
     res = np.zeros(tab.shape)
     for i in range(n_features):
         if custom:
-            x = tab[:,:,i]
-            res[:,:,i] = (x-np.mean(x))/np.std(x)
+            x = tab[:, :, i]
+            res[:, :, i] = (x-np.mean(x))/np.std(x)
         else:
-            res[:,:,i] = preprocessing.scale(tab[:,:,i])
+            res[:, :, i] = preprocessing.scale(tab[:, :, i])
     return res
+
 
 def write_preds(preds_list, filename='tem_predictions.csv'):
     with open(filename, mode='w+') as pred_file:
-        pred_writer = csv.writer(pred_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        pred_writer = csv.writer(pred_file, delimiter=',', quotechar='"',
+                                 quoting=csv.QUOTE_MINIMAL)
 
         pred_writer.writerow(['id', 'lable'])
 
